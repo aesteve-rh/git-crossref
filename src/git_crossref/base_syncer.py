@@ -1,5 +1,6 @@
 """Base abstract class for Git object syncers."""
 
+import fnmatch
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -112,9 +113,26 @@ class BaseGitObjectSyncer(GitBase, ABC):
         # The passed git_root parameter is for compatibility and should match
         if git_root != self.git_root:
             logger.debug(
-                f"Note: git_root parameter ({git_root}) differs from detected git root ({self.git_root})"
+                "Note: git_root parameter (%s) differs from detected git root (%s)",
+                git_root,
+                self.git_root,
             )
         # Use the detected git_root from GitBase
+
+    def _is_excluded(self, file_path: str, exclude_patterns: list[str] | None) -> bool:
+        """Check if a file should be excluded based on exclude patterns.
+
+        Args:
+            file_path: The file path to check
+            exclude_patterns: List of glob patterns to exclude
+
+        Returns:
+            True if the file should be excluded, False otherwise
+        """
+        if not exclude_patterns:
+            return False
+
+        return any(fnmatch.fnmatch(file_path, pattern) for pattern in exclude_patterns)
 
     @abstractmethod
     def can_handle(self, source_path: str) -> bool:
@@ -130,6 +148,7 @@ class BaseGitObjectSyncer(GitBase, ABC):
         ignore_changes: bool = False,
         include_subdirs: bool = False,
         transform: list[str] | None = None,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """Sync the Git object from source to destination."""
 
@@ -141,6 +160,7 @@ class BaseGitObjectSyncer(GitBase, ABC):
         commit_hash: str,
         transform: list[str] | None = None,
         include_subdirs: bool = False,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """Check the status of the Git object without syncing."""
 
@@ -222,6 +242,7 @@ class BaseGitObjectSyncer(GitBase, ABC):
         ignore_changes: bool = False,
         include_subdirs: bool = False,
         transform: list[str] | None = None,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """
         Template method that handles the common sync/check operation pattern.
@@ -234,7 +255,9 @@ class BaseGitObjectSyncer(GitBase, ABC):
         """
         try:
             # Step 1: Find matching items to process
-            matched_items = self._find_matching_items(source_path, commit_hash, include_subdirs)
+            matched_items = self._find_matching_items(
+                source_path, commit_hash, include_subdirs, exclude
+            )
 
             # Step 2: Validate items exist
             if not matched_items:
@@ -277,7 +300,11 @@ class BaseGitObjectSyncer(GitBase, ABC):
 
     @abstractmethod
     def _find_matching_items(
-        self, source_path: str, commit_hash: str, include_subdirs: bool
+        self,
+        source_path: str,
+        commit_hash: str,
+        include_subdirs: bool,
+        exclude: list[str] | None = None,
     ) -> list[Any]:
         """Find all items to process. Returns implementation-specific item data."""
         ...
@@ -318,6 +345,10 @@ class BaseGitObjectSyncer(GitBase, ABC):
         is_pattern = self._is_pattern(source_path)
         operation_name = mode.value
         logger.error(
-            f"Failed to {operation_name} {'pattern' if is_pattern else 'path'} {source_path}: {error}"
+            "Failed to %s %s %s: %s",
+            operation_name,
+            "pattern" if is_pattern else "path",
+            source_path,
+            error,
         )
         return OperationError(operation_name, source_path, str(error), is_pattern)

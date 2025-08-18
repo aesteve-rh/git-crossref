@@ -189,10 +189,26 @@ class BlobSyncer(BaseGitObjectSyncer):
         return Path(destination_path)
 
     def _find_matching_items(
-        self, source_path: str, commit_hash: str, include_subdirs: bool
+        self,
+        source_path: str,
+        commit_hash: str,
+        include_subdirs: bool,
+        exclude: list[str] | None = None,
     ) -> list[tuple[str, Blob]]:
         """Find files matching the source path (either single file or glob pattern)."""
-        return self._find_matching_files(source_path, commit_hash, include_subdirs)
+        matched_files = self._find_matching_files(source_path, commit_hash, include_subdirs)
+
+        # Apply exclusion filters
+        if exclude:
+            filtered_files = []
+            for relative_path, blob in matched_files:
+                if not self._is_excluded(relative_path, exclude):
+                    filtered_files.append((relative_path, blob))
+                else:
+                    logger.debug("Excluding file: %s", relative_path)
+            return filtered_files
+
+        return matched_files
 
     def _process_single_item(
         self,
@@ -447,6 +463,7 @@ class BlobSyncer(BaseGitObjectSyncer):
         ignore_changes: bool = False,
         include_subdirs: bool = False,
         transform: list[str] | None = None,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """Sync files from remote to local (supports both single files and glob patterns)."""
         return self._process_operation(
@@ -458,6 +475,7 @@ class BlobSyncer(BaseGitObjectSyncer):
             ignore_changes,
             include_subdirs,
             transform,
+            exclude,
         )
 
     def check(
@@ -467,6 +485,7 @@ class BlobSyncer(BaseGitObjectSyncer):
         commit_hash: str,
         transform: list[str] | None = None,
         include_subdirs: bool = False,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """Check the status of files without syncing (supports single files and patterns)."""
         return self._process_operation(
@@ -478,4 +497,5 @@ class BlobSyncer(BaseGitObjectSyncer):
             False,
             include_subdirs,
             transform,
+            exclude,
         )

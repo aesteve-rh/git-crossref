@@ -45,6 +45,7 @@ class FileSync:
     ignore_changes: bool = False
     include_subdirs: bool = False
     transform: list[str] | None = None  # List of sed-like patterns: "s/old/new/g"
+    exclude: list[str] | None = None  # List of glob patterns to exclude from matching
 
     @property
     def is_tree_sync(self) -> bool:
@@ -86,6 +87,7 @@ class FileSync:
             ignore_changes=data.get("ignore_changes", False),
             include_subdirs=data.get("include_subdirs", False),
             transform=data.get("transform"),
+            exclude=data.get("exclude"),
         )
 
 
@@ -111,16 +113,7 @@ class GitSyncConfig:
         for remote_name, file_list in data.get("files", {}).items():
             files[remote_name] = []
             for file_data in file_list:
-                files[remote_name].append(
-                    FileSync(
-                        source=file_data["source"],
-                        destination=file_data["destination"],
-                        hash=file_data.get("hash", file_data.get("version")),
-                        ignore_changes=file_data.get("ignore_changes", False),
-                        include_subdirs=file_data.get("include_subdirs", False),
-                        transform=file_data.get("transform"),
-                    )
-                )
+                files[remote_name].append(FileSync.from_dict(file_data))
 
         return cls(remotes=remotes, files=files)
 

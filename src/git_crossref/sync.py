@@ -64,6 +64,7 @@ class FileSyncer:
                 ignore_changes=file_sync.ignore_changes,
                 include_subdirs=file_sync.include_subdirs,
                 transform=file_sync.transform,
+                exclude=file_sync.exclude,
             )
 
             return SyncResult(
@@ -111,6 +112,7 @@ class FileSyncer:
                 target_commit,
                 transform=file_sync.transform,
                 include_subdirs=file_sync.include_subdirs,
+                exclude=file_sync.exclude,
             )
 
             return SyncResult(

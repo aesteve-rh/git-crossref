@@ -102,6 +102,13 @@ def get_embedded_schema() -> dict[str, Any]:
                                         "pattern": "^s/.+/.*/[gimx]*$",
                                     },
                                 },
+                                "exclude": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                    },
+                                },
                             },
                             "additionalProperties": False,
                         },

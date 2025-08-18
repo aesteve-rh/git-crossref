@@ -132,6 +132,20 @@
             ["s/localhost/production.example.com/g"],
             ["s/DEBUG = True/DEBUG = False/", "s/version = .*/version = '1.0.0'/"]
           ]
+        },
+        "exclude": {
+          "type": "array",
+          "description": "List of glob patterns to exclude from file matching (only applies to glob patterns and directories)",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Glob pattern to exclude from matching (e.g., '*.tmp', 'test_*', '**/node_modules/**')"
+          },
+          "examples": [
+            ["*.tmp", "*.log"],
+            ["test_*", "**/tests/**"],
+            ["**/__pycache__/**", "*.pyc"]
+          ]
         }
       },
       "additionalProperties": false

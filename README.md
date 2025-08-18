@@ -85,6 +85,14 @@ files:
     - source: "templates/"
       destination: "project-templates/"
       # Syncs entire templates directory
+    
+    # Glob pattern with exclusions
+    - source: "scripts/*.py"
+      destination: "tools/"
+      include_subdirs: true
+      exclude:
+        - "*_test.py"       # Skip test files
+        - "*.tmp"           # Skip temporary files
 
   another-source:
     # Script file
@@ -107,11 +115,71 @@ files:
 - `destination`: Local path where content should be copied
 - `hash`: Optional specific commit hash (overrides `version`)
 - `ignore_changes`: If true, overwrites local files without checking for changes
+- `include_subdirs`: If true, include subdirectories when copying directories objects
+- `exclude`: List of glob patterns to exclude from syncing (applies to directories and glob patterns)
+- `transform`: List of sed-like text transformations to apply during sync
 
 **Git Object Types:**
 
 - **Blob (file)**: `source: "utils.py"` - single file and/or glob patterns
 - **Tree (directory)**: `source: "templates/"` - entire directory (note trailing slash)
+
+## File Exclusion Patterns
+
+When syncing directories or glob patterns, you can exclude specific files using the `exclude` option.
+This is particularly useful for filtering out temporary files, test files, or other unwanted content.
+
+### Basic Exclusion Syntax
+
+```yaml
+files:
+  upstream:
+    # Directory sync with exclusions
+    - source: "src/"
+      destination: "vendor/src/"
+      exclude:
+        - "*.tmp"           # Exclude all .tmp files
+        - "test_*"          # Exclude files starting with "test_"
+        - "__pycache__/*"   # Exclude everything in __pycache__ directories
+    
+    # Glob pattern with exclusions
+    - source: "scripts/*.py"
+      destination: "tools/"
+      include_subdirs: true
+      exclude:
+        - "*_test.py"       # Exclude test files
+        - "*.pyc"           # Exclude compiled Python files
+```
+
+### Exclusion Pattern Types
+
+**Exact filename matching:**
+```yaml
+exclude:
+  - "config.py"           # Excludes exactly "config.py"
+  - "Dockerfile"          # Excludes exactly "Dockerfile"
+  - ".gitignore"          # Excludes exactly ".gitignore"
+```
+
+**Wildcard patterns:**
+```yaml
+exclude:
+  - "**/node_modules/**"  # Any node_modules directory anywhere
+  - "*.log"               # All files ending with .log
+  - "temp*"               # All files starting with "temp"
+  - "*_backup.*"          # All backup files with any extension
+  - "*.min.js"            # All minified JavaScript files
+```
+
+### Pattern Matching Rules
+
+The exclusion patterns use Unix shell-style wildcards via Python's `fnmatch`:
+
+- `*` matches any sequence of characters (except path separators)
+- `?` matches any single character
+- `[seq]` matches any character in seq (e.g., `[abc]` matches 'a', 'b', or 'c')
+- `[!seq]` matches any character not in seq
+- `**` matches across directory boundaries when used with `/`
 
 ## Commands
 

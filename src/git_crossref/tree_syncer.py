@@ -22,7 +22,11 @@ class TreeSyncer(BaseGitObjectSyncer):
         return False
 
     def _find_matching_items(
-        self, source_path: str, commit_hash: str, include_subdirs: bool
+        self,
+        source_path: str,
+        commit_hash: str,
+        include_subdirs: bool,
+        exclude: list[str] | None = None,
     ) -> list[tuple[str, Blob]]:
         """Find all blob files in the tree."""
         commit = self._resolve_commit_with_fetch(commit_hash)
@@ -52,6 +56,11 @@ class TreeSyncer(BaseGitObjectSyncer):
                         continue  # Skip items not in our tree
                 else:
                     relative_path = str(item_path)
+
+                # Apply exclusion filters
+                if exclude and self._is_excluded(relative_path, exclude):
+                    logger.debug("Excluding file: %s", relative_path)
+                    continue
 
                 matched_files.append((relative_path, item))
 
@@ -169,6 +178,7 @@ class TreeSyncer(BaseGitObjectSyncer):
         ignore_changes: bool = False,
         include_subdirs: bool = False,
         transform: list[str] | None = None,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """Sync an entire directory tree from remote to local."""
         return self._process_operation(
@@ -180,6 +190,7 @@ class TreeSyncer(BaseGitObjectSyncer):
             ignore_changes,
             include_subdirs,
             transform,
+            exclude,
         )
 
     def check(
@@ -189,6 +200,7 @@ class TreeSyncer(BaseGitObjectSyncer):
         commit_hash: str,
         transform: list[str] | None = None,
         include_subdirs: bool = False,
+        exclude: list[str] | None = None,
     ) -> SyncSuccess:
         """Check the status of an entire directory tree without syncing."""
         return self._process_operation(
@@ -200,4 +212,5 @@ class TreeSyncer(BaseGitObjectSyncer):
             False,
             include_subdirs,
             transform,
+            exclude,
         )
