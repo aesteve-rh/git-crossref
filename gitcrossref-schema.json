@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aesteve-rh/git-crossref/schema",
+  "title": "Git CrossRef Configuration",
+  "description": "Configuration schema for git-crossref tool",
+  "type": "object",
+  "required": ["remotes", "files"],
+  "properties": {
+    "remotes": {
+      "type": "object",
+      "description": "Remote repository configurations",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": {
+          "$ref": "#/$defs/remote"
+        }
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "type": "object",
+      "description": "File synchronization rules grouped by remote",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-zA-Z0-9_-]+$": {
+          "type": "array",
+          "description": "List of files to sync from this remote",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/file_sync"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "remote": {
+      "type": "object",
+      "description": "Remote repository configuration",
+      "required": ["url"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Git repository URL (https, ssh, or git protocol)",
+          "minLength": 1,
+          "pattern": "^(https?://|git://|ssh://|git@[^:]+:).+",
+          "examples": [
+            "https://github.com/user/repo.git",
+            "git@github.com:user/repo.git",
+            "ssh://git@github.com/user/repo.git"
+          ]
+        },
+        "base_path": {
+          "type": "string",
+          "description": "Base path within the repository (optional, trailing slashes are normalized)",
+          "pattern": "^[^/].*$",
+          "examples": ["src/library", "scripts", "docs", "src/library/"]
+        },
+        "version": {
+          "type": "string",
+          "description": "Default branch, tag, or commit hash for files from this remote",
+          "minLength": 1,
+          "default": "main",
+          "examples": ["main", "v1.2.3", "abc123def456"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "file_sync": {
+      "type": "object",
+      "description": "File or directory synchronization rule",
+      "required": ["source", "destination"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Source file, directory, or glob pattern in the remote repository. End with '/' for directories. Use wildcards (* and ?) for glob patterns.",
+          "minLength": 1,
+          "examples": [
+            "utils.py",
+            "config.yaml", 
+            "src/",
+            "docs/api/",
+            "util/*.py",
+            "scripts/build*",
+            "config/*.yaml"
+          ]
+        },
+        "destination": {
+          "type": "string",
+          "description": "Destination file or directory path in the current repository",
+          "minLength": 1,
+          "examples": [
+            "libs/utils.py",
+            "config/defaults.yaml",
+            "vendor/src/",
+            "docs/external/"
+          ]
+        },
+        "hash": {
+          "type": "string",
+          "description": "Specific commit hash, branch, or tag to sync (overrides remote's version)",
+          "minLength": 7,
+          "pattern": "^[a-fA-F0-9]{7,64}$|^[a-zA-Z0-9_./-]+$",
+          "examples": [
+            "abc123def456",
+            "v1.2.3",
+            "feature/new-api",
+            "main"
+          ]
+        },
+        "ignore_changes": {
+          "type": "boolean",
+          "description": "Ignore local changes when syncing (force overwrite)",
+          "default": false
+        },
+        "include_subdirs": {
+          "type": "boolean",
+          "description": "Whether to include files from subdirectories when syncing glob patterns. If false, only matches files directly in the specified directory",
+          "default": false
+        },
+        "transform": {
+          "type": "array",
+          "description": "List of sed-like text transformations to apply to synced files",
+          "items": {
+            "type": "string",
+            "pattern": "^s/.+/.*/[gimx]*$",
+            "description": "Sed substitution pattern in format 's/search/replace/flags'"
+          },
+          "examples": [
+            ["s/localhost/production.example.com/g"],
+            ["s/DEBUG = True/DEBUG = False/", "s/version = .*/version = '1.0.0'/"]
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
