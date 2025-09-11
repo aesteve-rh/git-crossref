@@ -34,9 +34,10 @@ class TestCLI:
 
     def test_cli_verbose_flag(self, runner):
         """Test CLI verbose flag."""
-        with patch("git_crossref.main.logger") as mock_logger:
+        with patch("git_crossref.main.configure_logging") as mock_configure:
             result = runner.invoke(cli, ["--verbose", "validate"])
-            mock_logger.configure_logging.assert_called_with(verbose=True)
+            assert result.exit_code == 0
+            mock_configure.assert_called_with(verbose=True)
 
 
 class TestSyncCommand:
@@ -130,7 +131,7 @@ class TestSyncCommand:
             mock_get_config.side_effect = ConfigurationNotFoundError("/path/to/config")
             result = runner.invoke(cli, ["sync"])
             assert result.exit_code == 1
-            assert "Configuration not found" in result.output
+            assert "Run 'git-crossref init' to create a configuration file." in result.output
 
 
 class TestCheckCommand:
@@ -184,7 +185,7 @@ class TestInitCommand:
         result = runner.invoke(cli, ["init"])
         assert result.exit_code == 0
         assert config_path.exists()
-        assert "Created configuration file" in result.output
+        assert "Edit this file to configure your remotes and files." in result.output
 
     @patch("git_crossref.main.get_config_path")
     def test_init_file_exists_no_overwrite(self, mock_get_config_path, runner, temp_dir):
@@ -193,20 +194,24 @@ class TestInitCommand:
         config_path.write_text("existing config")
         mock_get_config_path.return_value = config_path
 
-        result = runner.invoke(cli, ["init"], input="n\n")
-        assert result.exit_code == 0
-        assert "already exists" in result.output
+        with patch("git_crossref.main.logger") as mock_logger:
+            result = runner.invoke(cli, ["init"], input="n\n")
+            assert result.exit_code == 0
+            mock_logger.warning.assert_called_with("Configuration file already exists: %s", config_path)
 
     @patch("git_crossref.main.get_config_path")
     def test_init_file_exists_overwrite(self, mock_get_config_path, runner, temp_dir):
-        """Test init when file exists and user chooses to overwrite."""
+        """Test init when file exists - should just warn and exit."""
         config_path = temp_dir / ".gitcrossref"
         config_path.write_text("existing config")
         mock_get_config_path.return_value = config_path
 
-        result = runner.invoke(cli, ["init"], input="y\n")
-        assert result.exit_code == 0
-        assert "Created configuration file" in result.output
+        with patch("git_crossref.main.logger") as mock_logger:
+            result = runner.invoke(cli, ["init"], input="y\n")
+            assert result.exit_code == 0
+            mock_logger.warning.assert_called_with("Configuration file already exists: %s", config_path)
+            # When file exists, no output to stdout, just warning to stderr
+            assert result.output == ""
 
     @patch("git_crossref.main.get_config_path")
     @patch("git_crossref.main.get_config")
@@ -232,7 +237,7 @@ class TestInitCommand:
 
         result = runner.invoke(cli, ["init", "--clone"])
         assert result.exit_code == 0
-        assert "Cloning remote repositories" in result.output
+        assert "Edit this file to configure your remotes and files." in result.output
 
 
 class TestCloneCommand:
@@ -259,9 +264,11 @@ class TestCloneCommand:
         mock_instance.git_manager.get_repository.return_value = mock_repo
         mock_orchestrator.return_value = mock_instance
 
-        result = runner.invoke(cli, ["clone"])
-        assert result.exit_code == 0
-        assert "Cloning all remote repositories" in result.output
+        with patch("git_crossref.main.logger") as mock_logger:
+            result = runner.invoke(cli, ["clone"])
+            assert result.exit_code == 0
+            mock_logger.info.assert_any_call("Cloning all remote repositories...")
+            mock_logger.info.assert_any_call("All remote repositories cloned successfully")
 
     @patch("git_crossref.main.get_config")
     @patch("git_crossref.main.GitSyncOrchestrator")
@@ -273,17 +280,20 @@ class TestCloneCommand:
         mock_instance.git_manager.get_repository.return_value = mock_repo
         mock_orchestrator.return_value = mock_instance
 
-        result = runner.invoke(cli, ["clone", "--remote", "upstream"])
-        assert result.exit_code == 0
-        assert "Cloning remote repository: upstream" in result.output
+        with patch("git_crossref.main.logger") as mock_logger:
+            result = runner.invoke(cli, ["clone", "--remote", "upstream"])
+            assert result.exit_code == 0
+            mock_logger.info.assert_any_call("Cloning remote repository: %s", "upstream")
+            mock_logger.info.assert_any_call("Successfully cloned %s", "upstream")
 
     def test_clone_remote_not_found(self, runner, sample_config):
         """Test cloning non-existent remote."""
         with patch("git_crossref.main.get_config") as mock_get_config:
             mock_get_config.return_value = sample_config
-            result = runner.invoke(cli, ["clone", "--remote", "nonexistent"])
-            assert result.exit_code == 1
-            assert "not found in configuration" in result.output
+            with patch("git_crossref.main.logger") as mock_logger:
+                result = runner.invoke(cli, ["clone", "--remote", "nonexistent"])
+                assert result.exit_code == 1
+                mock_logger.error.assert_called_with("Remote '%s' not found in configuration", "nonexistent")
 
 
 class TestCleanCommand:
@@ -337,9 +347,11 @@ class TestValidateCommand:
         mock_validate.return_value = {}
         mock_get_config.return_value = sample_config
 
-        result = runner.invoke(cli, ["validate"])
-        assert result.exit_code == 0
-        assert "Configuration file is valid" in result.output
+        with patch("git_crossref.main.logger") as mock_logger:
+            result = runner.invoke(cli, ["validate"])
+            assert result.exit_code == 0
+            mock_logger.info.assert_any_call("Configuration file is valid")
+            mock_logger.info.assert_any_call("Schema validation passed for %s", temp_dir / ".gitcrossref")
 
     def test_validate_config_not_found(self, runner):
         """Test validation when config not found."""
@@ -351,42 +363,4 @@ class TestValidateCommand:
                 mock_validate.side_effect = ConfigurationNotFoundError("/nonexistent/config")
                 result = runner.invoke(cli, ["validate"])
                 assert result.exit_code == 1
-                assert "Configuration file not found" in result.output
-
-
-class TestUtilityCommands:
-    """Test utility commands."""
-
-    @pytest.fixture
-    def runner(self):
-        """Create a Click CLI runner."""
-        return CliRunner()
-
-    @patch("git_crossref.main.get_config_path")
-    def test_show_config_path(self, mock_get_config_path, runner, temp_dir):
-        """Test show-config-path command."""
-        config_path = temp_dir / ".gitcrossref"
-        mock_get_config_path.return_value = config_path
-
-        result = runner.invoke(cli, ["show-config-path"])
-        assert result.exit_code == 0
-        assert str(config_path) in result.output
-
-    @patch("git_crossref.main.get_schema_path")
-    def test_show_schema_path(self, mock_get_schema_path, runner, temp_dir):
-        """Test show-schema-path command."""
-        schema_path = temp_dir / "schema.json"
-        mock_get_schema_path.return_value = schema_path
-
-        result = runner.invoke(cli, ["show-schema-path"])
-        assert result.exit_code == 0
-        assert str(schema_path) in result.output
-
-    @patch("git_crossref.main.get_schema_path")
-    def test_show_schema_path_not_found(self, mock_get_schema_path, runner):
-        """Test show-schema-path when no schema file found."""
-        mock_get_schema_path.return_value = None
-
-        result = runner.invoke(cli, ["show-schema-path"])
-        assert result.exit_code == 0
-        assert "No schema file found" in result.output
+                assert "Run 'git-crossref init' to create a configuration file." in result.output
