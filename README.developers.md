@@ -158,7 +158,7 @@ tox -e test-fast
    python -m build
    ```
 
-4. Upload to the package to pypi:
+4. Upload the package to PyPI:
 
    ```bash
    python -m twine upload dist/*

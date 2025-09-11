@@ -236,16 +236,23 @@ def init(ctx, clone):
     if config_path.exists():
         logger.warning("Configuration file already exists: %s", config_path)
     else:
-        # Ensure we're creating in repository root, not .git directory
-        config_path.parent.mkdir(exist_ok=True)
-        with open(config_path, "w", encoding="utf-8") as f:
-            f.write(SAMPLE_CONFIG)
+        try:
+            # Ensure we're creating in repository root, not .git directory
+            config_path.parent.mkdir(exist_ok=True)
+            with open(config_path, "w", encoding="utf-8") as f:
+                f.write(SAMPLE_CONFIG)
 
-        logger.info("Created configuration file: %s", config_path)
-        click.echo("Edit this file to configure your remotes and files.")
-        click.echo(
-            "Tip: Add this file to version control to share sync configuration with your team."
-        )
+            logger.info("Created configuration file: %s", config_path)
+            click.echo("Edit this file to configure your remotes and files.")
+            click.echo(
+                "Tip: Add this file to version control to share sync configuration with your team."
+            )
+        except PermissionError as e:
+            logger.error("Permission denied creating configuration file: %s", e)
+            sys.exit(1)
+        except OSError as e:
+            logger.error("Failed to create configuration file: %s", e)
+            sys.exit(1)
 
     # Optionally clone repositories (works regardless of whether config was created or existed)
     if clone:
