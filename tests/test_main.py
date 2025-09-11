@@ -34,8 +34,10 @@ class TestCLI:
 
     def test_cli_verbose_flag(self, runner):
         """Test CLI verbose flag."""
-        with patch("git_crossref.main.configure_logging") as mock_configure, \
-             patch("git_crossref.main.get_config_path") as mock_get_config_path:
+        with (
+            patch("git_crossref.main.configure_logging") as mock_configure,
+            patch("git_crossref.main.get_config_path") as mock_get_config_path,
+        ):
             # Mock the config path to a file that exists so init doesn't try to create one
             mock_config_path = Mock()
             mock_config_path.exists.return_value = True

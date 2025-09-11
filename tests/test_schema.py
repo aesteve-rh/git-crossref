@@ -1,7 +1,8 @@
 """Tests for the schema module."""
 
 import json
-from unittest.mock import Mock, patch
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
