@@ -17,6 +17,14 @@ from .schema import get_schema_path, validate_config_file
 from .status import SyncStatus
 from .sync import GitSyncOrchestrator, format_sync_results
 
+
+def version_callback(ctx, param, value):
+    """Callback to handle --version option."""
+    if value:
+        click.echo(__version__)
+        ctx.exit()
+
+
 SAMPLE_CONFIG = """remotes:
   upstream:
     url: "https://github.com/example/source-repo.git"
@@ -75,7 +83,7 @@ files:
     help="Show version and exit",
     is_eager=True,
     expose_value=False,
-    callback=lambda ctx, param, value: click.echo(__version__) or ctx.exit() if value else None,
+    callback=version_callback,
 )
 @click.help_option("-h")
 @click.pass_context
