@@ -60,11 +60,13 @@ def sample_config_file(temp_dir, sample_config):
     config_data = {
         "remotes": {
             name: {
-                key: value for key, value in {
-                    "url": remote.url, 
-                    "base_path": remote.base_path, 
-                    "version": remote.version
-                }.items() if value  # Only include non-empty values
+                key: value
+                for key, value in {
+                    "url": remote.url,
+                    "base_path": remote.base_path,
+                    "version": remote.version,
+                }.items()
+                if value  # Only include non-empty values
             }
             for name, remote in sample_config.remotes.items()
         },

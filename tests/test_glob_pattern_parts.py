@@ -71,7 +71,7 @@ class TestGlobPatternParts:
     def test_properties_parametrized(self, base_path, pattern, expected_valid, expected_wildcards):
         """Test all properties with various input combinations."""
         parts = GlobPatternParts(base_path=base_path, pattern=pattern)
-        
+
         assert parts.base_path == base_path
         assert parts.pattern == pattern
         assert parts.is_valid == expected_valid
@@ -81,7 +81,7 @@ class TestGlobPatternParts:
         """Test string representation of GlobPatternParts."""
         parts = GlobPatternParts(base_path="src/utils", pattern="*.py")
         str_repr = str(parts)
-        
+
         assert "GlobPatternParts" in str_repr
         assert "base_path='src/utils'" in str_repr
         assert "pattern='*.py'" in str_repr
@@ -91,7 +91,7 @@ class TestGlobPatternParts:
         parts1 = GlobPatternParts(base_path="src", pattern="*.py")
         parts2 = GlobPatternParts(base_path="src", pattern="*.py")
         parts3 = GlobPatternParts(base_path="lib", pattern="*.py")
-        
+
         assert parts1 == parts2
         assert parts1 != parts3
 
@@ -104,10 +104,10 @@ class TestGlobPatternParts:
             ("tests/unit/config", "test_*.py", "Specific directory with prefix glob"),
             ("assets/images/thumbnails", "thumb_*.{jpg,png}", "Complex glob with braces"),
         ]
-        
+
         for base_path, pattern, description in test_cases:
             parts = GlobPatternParts(base_path=base_path, pattern=pattern)
-            
+
             assert parts.base_path == base_path, f"Base path failed for: {description}"
             assert parts.pattern == pattern, f"Pattern failed for: {description}"
             assert parts.is_valid is True, f"Validity failed for: {description}"

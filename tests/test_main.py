@@ -34,8 +34,14 @@ class TestCLI:
 
     def test_cli_verbose_flag(self, runner):
         """Test CLI verbose flag."""
-        with patch("git_crossref.main.configure_logging") as mock_configure:
-            result = runner.invoke(cli, ["--verbose", "validate"])
+        with patch("git_crossref.main.configure_logging") as mock_configure, \
+             patch("git_crossref.main.get_config_path") as mock_get_config_path:
+            # Mock the config path to a file that exists so init doesn't try to create one
+            mock_config_path = Mock()
+            mock_config_path.exists.return_value = True
+            mock_get_config_path.return_value = mock_config_path
+
+            result = runner.invoke(cli, ["--verbose", "init"])
             assert result.exit_code == 0
             mock_configure.assert_called_with(verbose=True)
 
@@ -197,7 +203,9 @@ class TestInitCommand:
         with patch("git_crossref.main.logger") as mock_logger:
             result = runner.invoke(cli, ["init"], input="n\n")
             assert result.exit_code == 0
-            mock_logger.warning.assert_called_with("Configuration file already exists: %s", config_path)
+            mock_logger.warning.assert_called_with(
+                "Configuration file already exists: %s", config_path
+            )
 
     @patch("git_crossref.main.get_config_path")
     def test_init_file_exists_overwrite(self, mock_get_config_path, runner, temp_dir):
@@ -209,9 +217,59 @@ class TestInitCommand:
         with patch("git_crossref.main.logger") as mock_logger:
             result = runner.invoke(cli, ["init"], input="y\n")
             assert result.exit_code == 0
-            mock_logger.warning.assert_called_with("Configuration file already exists: %s", config_path)
+            mock_logger.warning.assert_called_with(
+                "Configuration file already exists: %s", config_path
+            )
             # When file exists, no output to stdout, just warning to stderr
             assert result.output == ""
+
+    @patch("git_crossref.main.get_config_path")
+    def test_init_file_exists_not_writable(self, mock_get_config_path, runner, temp_dir):
+        """Test init when file exists but directory is not writable."""
+        config_path = temp_dir / ".gitcrossref"
+        config_path.write_text("existing config")
+
+        # Make the parent directory read-only to simulate permission issues
+        temp_dir.chmod(0o555)  # read + execute only, no write
+        mock_get_config_path.return_value = config_path
+
+        try:
+            with patch("git_crossref.main.logger") as mock_logger:
+                result = runner.invoke(cli, ["init"], input="y\n")
+                # The init command should still succeed with just a warning since it doesn't overwrite
+                assert result.exit_code == 0
+                mock_logger.warning.assert_called_with(
+                    "Configuration file already exists: %s", config_path
+                )
+        finally:
+            # Restore permissions so temp cleanup works
+            temp_dir.chmod(0o755)
+
+    @patch("git_crossref.main.get_config_path")
+    def test_init_directory_not_writable(self, mock_get_config_path, runner, temp_dir):
+        """Test init when directory is not writable for new file creation."""
+        config_path = temp_dir / ".gitcrossref"
+        # File doesn't exist, but directory is not writable
+
+        # Make the directory read-only
+        temp_dir.chmod(0o555)  # read + execute only, no write
+        mock_get_config_path.return_value = config_path
+
+        try:
+            with patch("git_crossref.main.logger") as mock_logger:
+                result = runner.invoke(cli, ["init"])
+                # Should fail with permission error when trying to create the file
+                assert result.exit_code == 1
+                # Should log an error about the permission issue
+                mock_logger.error.assert_called()
+                # Check that it's a permission-related error
+                error_call = mock_logger.error.call_args
+                assert error_call is not None
+                error_message = error_call[0][0]  # First argument to the error call
+                assert "permission" in error_message.lower() or "denied" in error_message.lower()
+        finally:
+            # Restore permissions so temp cleanup works
+            temp_dir.chmod(0o755)
 
     @patch("git_crossref.main.get_config_path")
     @patch("git_crossref.main.get_config")
@@ -293,7 +351,9 @@ class TestCloneCommand:
             with patch("git_crossref.main.logger") as mock_logger:
                 result = runner.invoke(cli, ["clone", "--remote", "nonexistent"])
                 assert result.exit_code == 1
-                mock_logger.error.assert_called_with("Remote '%s' not found in configuration", "nonexistent")
+                mock_logger.error.assert_called_with(
+                    "Remote '%s' not found in configuration", "nonexistent"
+                )
 
 
 class TestCleanCommand:
@@ -351,7 +411,9 @@ class TestValidateCommand:
             result = runner.invoke(cli, ["validate"])
             assert result.exit_code == 0
             mock_logger.info.assert_any_call("Configuration file is valid")
-            mock_logger.info.assert_any_call("Schema validation passed for %s", temp_dir / ".gitcrossref")
+            mock_logger.info.assert_any_call(
+                "Schema validation passed for %s", temp_dir / ".gitcrossref"
+            )
 
     def test_validate_config_not_found(self, runner):
         """Test validation when config not found."""
