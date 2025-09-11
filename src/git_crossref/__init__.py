@@ -1,6 +1,6 @@
 """Git-sync-files: A Git plugin for syncing specific files from multiple repositories."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 # Export main exception classes for easy access
 from .exceptions import (
