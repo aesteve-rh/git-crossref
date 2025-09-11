@@ -8,7 +8,7 @@ import pytest
 import yaml
 from git import Repo
 
-from git_crossref.config import GitSyncConfig, Remote, FileSync
+from git_crossref.config import FileSync, GitSyncConfig, Remote
 
 
 @pytest.fixture

@@ -166,8 +166,8 @@ class TestGitSyncOrchestrator:
     @pytest.fixture
     def orchestrator(self, sample_config):
         """Create a GitSyncOrchestrator instance for testing."""
-        with patch("git_crossref.sync.GitSyncManager") as mock_manager:
-            with patch("git_crossref.sync.FileSyncer") as mock_syncer:
+        with patch("git_crossref.sync.GitSyncManager"):
+            with patch("git_crossref.sync.FileSyncer"):
                 return GitSyncOrchestrator(sample_config)
 
     def test_orchestrator_init(self, orchestrator, sample_config):
