@@ -177,7 +177,7 @@ class BaseGitObjectSyncer(GitBase, ABC):
 
             # Resolve any relative components (.., .) without going to filesystem
             # This works entirely with path strings
-            parts = []
+            parts: list[str] = []
             for part in combined_path.parts:
                 if part == "..":
                     if parts:  # Don't go above repository root

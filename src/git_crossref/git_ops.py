@@ -182,7 +182,7 @@ class GitRepository(BaseRepository):
             base_path_obj = Path(self.remote.base_path)
             combined_path = base_path_obj / file_path_obj
 
-            parts = []
+            parts: list[str] = []
             for part in combined_path.parts:
                 if part == "..":
                     if parts:  # Don't go above repository root

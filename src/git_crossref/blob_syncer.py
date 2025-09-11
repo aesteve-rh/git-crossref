@@ -118,7 +118,7 @@ class BlobSyncer(BaseGitObjectSyncer):
             "config.yaml" -> GlobPatternParts(base_path="", pattern=None)
         """
         pattern_path = Path(source_path)
-        base_parts = []
+        base_parts: list[str] = []
 
         for i, part in enumerate(pattern_path.parts):
             if "*" in part or "?" in part:
