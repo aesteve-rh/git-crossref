@@ -115,10 +115,20 @@ class FileSyncer:
                 exclude=file_sync.exclude,
             )
 
+            try:
+                status = SyncStatus.from_text(git_result.message)
+            except ValueError:
+                logger.warning(
+                    "Unrecognized check status for %s: %s",
+                    file_sync.destination,
+                    git_result.message,
+                )
+                status = SyncStatus.ERROR
+
             return SyncResult(
                 file_sync=file_sync,
                 remote_name=remote_name,
-                status=SyncStatus.SUCCESS,
+                status=status,
                 message=git_result.message,
                 files_processed=git_result.objects_processed,
                 local_hash=None,  # Not applicable for polymorphic check
