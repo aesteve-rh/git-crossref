@@ -1,6 +1,6 @@
 [project]
 name = "git-crossref"
-version = "0.1.2"
+version = "0.1.3"
 description = "A Git plugin for cross-referencing and syncing specific files from multiple repositories."
 authors = [{name = "Albert Esteve", email = "aesteve@redhat.com"}]
 maintainers = [{name = "Albert Esteve", email = "aesteve@redhat.com"}]
